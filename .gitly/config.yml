@@ -1,2 +1,2 @@
 private_repo: "djsdev123/vendor-scan"
-permission: "push"
+permission: "pull"

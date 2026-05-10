@@ -1,0 +1,39 @@
+name: Gitly Invite
+on:
+  workflow_dispatch:
+    inputs:
+      username:
+        description: GitHub username to invite
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  invite:
+    runs-on: ubuntu-latest
+    env:
+      PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}
+      USERNAME: ${{ inputs.username }}
+    steps:
+      - name: Validate username
+        run: |
+          if ! [[ "$USERNAME" =~ ^[a-zA-Z0-9]([a-zA-Z0-9-]{0,37}[a-zA-Z0-9])?$ ]]; then
+            echo "Invalid username format"; exit 1
+          fi
+
+      - name: Invite collaborator
+        run: |
+          REPO="${{ vars.PRIVATE_REPO }}"
+          PERMISSION="${{ vars.PERMISSION }}"
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT \
+            -H "Authorization: Bearer $PRIVATE_REPO_PAT" \
+            -H "Accept: application/vnd.github+json" \
+            -d "{\"permission\":\"${PERMISSION:-push}\"}" \
+            "https://api.github.com/repos/$REPO/collaborators/$USERNAME")
+          echo "Invite status: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "201" ] && [ "$HTTP_CODE" != "204" ]; then
+            echo "Failed to invite"; exit 1
+          fi
+          echo "Invited @$USERNAME to $REPO"
